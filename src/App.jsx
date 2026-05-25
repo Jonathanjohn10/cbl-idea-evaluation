@@ -19,6 +19,14 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { evaluateIdea, validateApiKey, fetchModels, DEFAULT_PROMPT } from './services/GeminiService';
+import { 
+  initSupabase, 
+  isSupabaseConfigured, 
+  saveEvaluation, 
+  fetchEvaluations, 
+  deleteEvaluation, 
+  clearAllEvaluations 
+} from './services/SupabaseService';
 
 const ScoreCard = ({ title, score, type, description }) => {
   let cardClass = "";
@@ -201,6 +209,13 @@ const App = () => {
   const [keyStatus, setKeyStatus] = useState(null); // 'valid' | 'invalid' | null
   const [keyError, setKeyError] = useState('');
 
+  // Supabase Link state variables
+  const [supabaseUrl, setSupabaseUrl] = useState(localStorage.getItem('supabase_url') || '');
+  const [supabaseKey, setSupabaseKey] = useState(localStorage.getItem('supabase_anon_key') || '');
+  const [supabaseStatus, setSupabaseStatus] = useState('disconnected'); // 'connected' | 'error' | 'disconnected' | 'connecting'
+  const [supabaseError, setSupabaseError] = useState('');
+  const [showSupabaseKey, setShowSupabaseKey] = useState(false);
+
   const handleValidateKey = async () => {
     if (!apiKey.trim()) return;
     setValidatingKey(true);
@@ -268,6 +283,49 @@ const App = () => {
     }
   }, [theme]);
 
+  // Synchronize Supabase credentials and fetch history dynamically
+  useEffect(() => {
+    localStorage.setItem('supabase_url', supabaseUrl);
+    localStorage.setItem('supabase_anon_key', supabaseKey);
+
+    const initAndSync = async () => {
+      if (!supabaseUrl.trim() || !supabaseKey.trim()) {
+        initSupabase(null, null);
+        setSupabaseStatus('disconnected');
+        setSupabaseError('');
+        // Fallback to localStorage history
+        const localHist = JSON.parse(localStorage.getItem('cbl_evaluations_history') || '[]');
+        setHistory(localHist);
+        return;
+      }
+
+      setSupabaseStatus('connecting');
+      setSupabaseError('');
+
+      try {
+        const client = initSupabase(supabaseUrl.trim(), supabaseKey.trim());
+        if (!client) {
+          throw new Error("Invalid URL or Key format");
+        }
+
+        // Test connection by fetching evaluations
+        const dbEvaluations = await fetchEvaluations();
+        setHistory(dbEvaluations);
+        setSupabaseStatus('connected');
+      } catch (err) {
+        console.error("Supabase sync failed:", err);
+        setSupabaseStatus('error');
+        setSupabaseError(err.message || "Failed to connect to Supabase. Check your URL, Key, and table policies.");
+        
+        // Fallback to localStorage history
+        const localHist = JSON.parse(localStorage.getItem('cbl_evaluations_history') || '[]');
+        setHistory(localHist);
+      }
+    };
+
+    initAndSync();
+  }, [supabaseUrl, supabaseKey]);
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
@@ -291,13 +349,32 @@ const App = () => {
       const resultData = { ...data, project_idea: idea };
       setResult(resultData);
 
-      // Append to evaluations history
-      const historyItem = {
+      // Prepare history item
+      let historyItem = {
         id: Date.now().toString(),
         timestamp: new Date().toLocaleString(),
         idea: idea,
         result: data
       };
+
+      // Try to save to Supabase if active
+      if (isSupabaseConfigured()) {
+        try {
+          const savedRow = await saveEvaluation(idea, data);
+          if (savedRow) {
+            historyItem = {
+              id: savedRow.id,
+              timestamp: new Date(savedRow.created_at).toLocaleString(),
+              idea: savedRow.idea,
+              result: savedRow.result
+            };
+          }
+        } catch (dbErr) {
+          console.error("Failed to save to Supabase, falling back to local storage:", dbErr);
+          setError("Analyzed successfully, but failed to save to Supabase database. Saved offline in local cache instead.");
+        }
+      }
+
       const updatedHistory = [historyItem, ...history];
       setHistory(updatedHistory);
       localStorage.setItem('cbl_evaluations_history', JSON.stringify(updatedHistory));
@@ -313,6 +390,55 @@ const App = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteHistoryItem = async (e, id) => {
+    e.stopPropagation();
+    
+    if (!window.confirm("Are you sure you want to delete this evaluation?")) {
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
+      try {
+        await deleteEvaluation(id);
+      } catch (dbErr) {
+        console.error("Failed to delete from Supabase:", dbErr);
+        if (!window.confirm("Failed to delete from the live database. Do you want to remove it from local cache only?")) {
+          return;
+        }
+      }
+    }
+
+    const updatedHistory = history.filter(item => item.id !== id);
+    setHistory(updatedHistory);
+    localStorage.setItem('cbl_evaluations_history', JSON.stringify(updatedHistory));
+
+    // Clear result if deleted item is active
+    if (result && (result.id === id || (result.project_idea === history.find(item => item.id === id)?.idea && !result.id))) {
+      setResult(null);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!window.confirm("Are you sure you want to clear your entire evaluation history? This cannot be undone.")) {
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
+      try {
+        await clearAllEvaluations();
+      } catch (dbErr) {
+        console.error("Failed to clear Supabase evaluations:", dbErr);
+        if (!window.confirm("Failed to clear remote database. Do you want to clear local cache only?")) {
+          return;
+        }
+      }
+    }
+
+    setHistory([]);
+    localStorage.removeItem('cbl_evaluations_history');
+    setResult(null);
   };
 
   return (
@@ -481,6 +607,96 @@ const App = () => {
                       onChange={setModel} 
                       options={availableModels}
                     />
+                  </div>
+
+                  {/* Supabase Link Database Connection */}
+                  <div style={{ borderTop: '1px dashed var(--border-passive)', paddingTop: '20px', marginTop: '4px' }}>
+                    <h4 className="font-title-sm text-ink mb-3 flex items-center gap-2" style={{ fontWeight: 600, fontSize: '14.5px', margin: '0 0 16px 0' }}>
+                      <span>⚡</span> Supabase Database Link
+                    </h4>
+                    
+                    <div className="flex flex-col gap-4">
+                      {/* Supabase Project URL */}
+                      <div className="flex flex-col gap-2">
+                        <label className="font-caption text-muted" style={{ fontSize: '13px' }}>Supabase Project URL</label>
+                        <input 
+                          type="text" 
+                          value={supabaseUrl}
+                          onChange={(e) => setSupabaseUrl(e.target.value)}
+                          placeholder="https://your-project-id.supabase.co"
+                          className="w-full"
+                          style={{ height: '44px' }}
+                        />
+                      </div>
+
+                      {/* Supabase Anon Public Key */}
+                      <div className="flex flex-col gap-2">
+                        <label className="font-caption text-muted" style={{ fontSize: '13px' }}>Supabase Anon Public API Key</label>
+                        <div className="relative">
+                          <input 
+                            type={showSupabaseKey ? "text" : "password"} 
+                            value={supabaseKey}
+                            onChange={(e) => setSupabaseKey(e.target.value)}
+                            placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                            className="w-full pr-10"
+                            style={{ height: '44px' }}
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => setShowSupabaseKey(!showSupabaseKey)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+                            style={{ background: 'none', border: 'none', padding: 0 }}
+                          >
+                            {showSupabaseKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Supabase Status Banner Notifications */}
+                      {supabaseStatus === 'connecting' && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg border" style={{ backgroundColor: 'var(--bg-surface-soft)', borderColor: 'var(--border-passive)', color: 'var(--text-muted)' }}>
+                          <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid var(--border-passive)', borderTopColor: 'var(--text-ink)', display: 'inline-block' }} />
+                          <span className="font-body-md" style={{ fontSize: '13px' }}>Validating connection to Supabase...</span>
+                        </div>
+                      )}
+
+                      {supabaseStatus === 'connected' && (
+                        <div className="success-box" style={{ marginTop: '0', padding: '16px' }}>
+                          <div className="success-title" style={{ fontSize: '13.5px', fontWeight: 600 }}>
+                            <span>✓</span> Connected to Supabase
+                          </div>
+                          <p className="success-text" style={{ fontSize: '12.5px', marginTop: '6px', lineHeight: '1.4' }}>
+                            Your evaluation history is successfully synced and persisted in real-time with the live Supabase <strong>evaluations</strong> database table.
+                          </p>
+                        </div>
+                      )}
+
+                      {supabaseStatus === 'error' && (
+                        <div className="flex flex-col gap-2 p-4 rounded-lg border" style={{ backgroundColor: 'rgba(170, 45, 0, 0.05)', borderColor: 'var(--colors-error-border)', color: 'var(--colors-error)' }}>
+                          <div className="flex items-center gap-2 font-body-md" style={{ fontWeight: 600, fontSize: '13.5px' }}>
+                            <span>✗</span> Connection Error
+                          </div>
+                          <p className="font-body-md" style={{ fontSize: '12.5px', lineHeight: '1.45', margin: 0 }}>
+                            {supabaseError}
+                          </p>
+                          <div className="diagnostic-box" style={{ margin: '8px 0 0 0', padding: '12px' }}>
+                            <div className="diagnostic-title" style={{ fontSize: '12px', color: 'var(--text-ink)', fontWeight: 600 }}>
+                              Setup Diagnostic Steps:
+                            </div>
+                            <ul className="diagnostic-list" style={{ margin: '6px 0 0 0', paddingLeft: '16px', fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <li>Verify the <strong>evaluations</strong> table was created successfully via SQL Editor.</li>
+                              <li>Check if your Row Level Security (RLS) policies permit public SELECT, INSERT, and DELETE commands.</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+
+                      {supabaseStatus === 'disconnected' && (
+                        <p className="font-legal text-muted" style={{ fontSize: '11.5px', margin: 0 }}>
+                          Supabase is currently disconnected. The application is running in fully functional offline mode (persisting ideas to browser cache).
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Prompt */}
@@ -787,28 +1003,31 @@ const App = () => {
                   history.map((item) => (
                     <div 
                       key={item.id}
-                      onClick={() => {
-                        setIdea(item.idea);
-                        setResult({
-                          ...item.result,
-                          project_idea: item.idea
-                        });
-                        setShowHistoryDrawer(false);
-                        setShowResultIdea(true);
-                        setTimeout(() => {
-                          document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
-                        }, 100);
-                      }}
-                      className="lovable-card compact flex items-center justify-between cursor-pointer"
+                      className="lovable-card compact flex items-center justify-between"
                       style={{ 
                         backgroundColor: 'var(--bg-surface-soft)', 
                         border: '1px solid var(--border-passive)',
-                        textAlign: 'left',
                         transition: 'background-color 0.2s ease, border-color 0.2s ease',
-                        padding: '12px'
+                        padding: '12px',
+                        position: 'relative'
                       }}
                     >
-                      <div className="flex flex-col gap-1 flex-grow" style={{ maxWidth: '75%' }}>
+                      <div 
+                        onClick={() => {
+                          setIdea(item.idea);
+                          setResult({
+                            ...item.result,
+                            project_idea: item.idea
+                          });
+                          setShowHistoryDrawer(false);
+                          setShowResultIdea(true);
+                          setTimeout(() => {
+                            document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
+                          }, 100);
+                        }}
+                        className="flex flex-col gap-1 flex-grow cursor-pointer"
+                        style={{ maxWidth: '65%', marginRight: '8px', textAlign: 'left' }}
+                      >
                         <span className="font-caption text-muted" style={{ fontSize: '11px' }}>{item.timestamp}</span>
                         <p className="font-body-md text-ink" style={{ 
                           fontSize: '13.5px', 
@@ -822,21 +1041,50 @@ const App = () => {
                         </p>
                       </div>
                       
-                      {/* Overall Score Badge */}
-                      <div 
-                        className="font-title-sm flex items-center justify-center"
-                        style={{ 
-                          width: '38px', 
-                          height: '38px', 
-                          borderRadius: 'var(--rounded-md)', 
-                          backgroundColor: 'var(--colors-signature-peach)',
-                          color: '#1c1c1c',
-                          fontWeight: 600,
-                          fontSize: '13px',
-                          flexShrink: 0
-                        }}
-                      >
-                        {item.result.overall_score}
+                      <div className="flex items-center gap-3" style={{ flexShrink: 0 }}>
+                        {/* Overall Score Badge */}
+                        <div 
+                          onClick={() => {
+                            setIdea(item.idea);
+                            setResult({
+                              ...item.result,
+                              project_idea: item.idea
+                            });
+                            setShowHistoryDrawer(false);
+                            setShowResultIdea(true);
+                            setTimeout(() => {
+                              document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
+                            }, 100);
+                          }}
+                          className="font-title-sm flex items-center justify-center cursor-pointer"
+                          style={{ 
+                            width: '38px', 
+                            height: '38px', 
+                            borderRadius: 'var(--rounded-md)', 
+                            backgroundColor: 'var(--colors-signature-peach)',
+                            color: '#1c1c1c',
+                            fontWeight: 600,
+                            fontSize: '13px'
+                          }}
+                        >
+                          {item.result.overall_score}
+                        </div>
+
+                        {/* Deletion Control */}
+                        <button
+                          onClick={(e) => handleDeleteHistoryItem(e, item.id)}
+                          className="text-muted hover:text-ink flex items-center justify-center transition-colors"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '6px',
+                            borderRadius: 'var(--rounded-sm)',
+                          }}
+                          aria-label="Delete evaluation"
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </div>
                   ))
@@ -846,12 +1094,7 @@ const App = () => {
               {/* Clear button */}
               {history.length > 0 && (
                 <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to clear your evaluation history?")) {
-                      setHistory([]);
-                      localStorage.removeItem('cbl_evaluations_history');
-                    }
-                  }}
+                  onClick={handleClearHistory}
                   className="button-secondary"
                   style={{ 
                     width: '100%', 
