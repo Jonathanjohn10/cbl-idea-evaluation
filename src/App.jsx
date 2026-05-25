@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { Analytics } from '@vercel/analytics/react';
 import { evaluateIdea, validateApiKey, fetchModels, DEFAULT_PROMPT } from './services/GeminiService';
 
 const ScoreCard = ({ title, score, type, description }) => {
@@ -873,6 +874,7 @@ const App = () => {
           </>
         )}
       </AnimatePresence>
+      <Analytics />
     </div>
   );
 };
