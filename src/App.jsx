@@ -11,7 +11,10 @@ import {
   ChevronDown,
   Check,
   Cpu,
-  Zap
+  Zap,
+  History,
+  Trash2,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -188,6 +191,11 @@ const App = () => {
     { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Powerful)', icon: <Zap size={15} className="text-muted" style={{ display: 'flex', alignItems: 'center' }} /> }
   ]);
 
+  // Collapsible result project idea and history drawer variables
+  const [showResultIdea, setShowResultIdea] = useState(true);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  const [history, setHistory] = useState(JSON.parse(localStorage.getItem('cbl_evaluations_history') || '[]'));
+
   // API Key validation state variables
   const [validatingKey, setValidatingKey] = useState(false);
   const [keyStatus, setKeyStatus] = useState(null); // 'valid' | 'invalid' | null
@@ -279,7 +287,23 @@ const App = () => {
     setError(null);
     try {
       const data = await evaluateIdea(apiKey, model, prompt, idea);
-      setResult(data);
+      
+      const resultData = { ...data, project_idea: idea };
+      setResult(resultData);
+
+      // Append to evaluations history
+      const historyItem = {
+        id: Date.now().toString(),
+        timestamp: new Date().toLocaleString(),
+        idea: idea,
+        result: data
+      };
+      const updatedHistory = [historyItem, ...history];
+      setHistory(updatedHistory);
+      localStorage.setItem('cbl_evaluations_history', JSON.stringify(updatedHistory));
+
+      setShowResultIdea(true);
+
       // Scroll to results beautifully
       setTimeout(() => {
         document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
@@ -294,8 +318,20 @@ const App = () => {
   return (
     <div className="flex flex-col min-h-screen">
       
-      {/* Top Utility bar holding the Pill Mode Toggle */}
-      <div className="max-w-3xl mx-auto w-full px-6 pt-6 flex justify-end">
+      {/* Top Utility bar holding the Pill Mode Toggle & History */}
+      <div className="max-w-3xl mx-auto w-full px-6 pt-6 flex justify-end gap-3">
+        <button 
+          onClick={() => setShowHistoryDrawer(true)}
+          className="button-pill"
+          aria-label="Open evaluation history"
+          style={{ padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+        >
+          <History size={14} className="text-muted" />
+          <span className="font-button-small" style={{ fontSize: '13px' }}>
+            History ({history.length})
+          </span>
+        </button>
+
         <button 
           onClick={toggleTheme}
           className="button-pill"
@@ -550,6 +586,62 @@ const App = () => {
                 <h2 className="font-display-md" style={{ fontSize: '28px', letterSpacing: '-0.5px' }}>Analysis & SDG Matrix</h2>
               </div>
 
+              {/* Collapsible Project Idea and Overall Score on Top! */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+                {/* Submitted Project Idea (Collapsible) */}
+                <div className="md:col-span-2 lovable-card flex flex-col gap-3" style={{ padding: '20px 24px' }}>
+                  <div 
+                    onClick={() => setShowResultIdea(!showResultIdea)}
+                    className="flex items-center justify-between cursor-pointer py-1"
+                  >
+                    <div className="flex items-center gap-2 font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '15px' }}>
+                      <span>💡</span>
+                      Submitted Project Idea
+                    </div>
+                    <span style={{ 
+                      fontSize: '11px', 
+                      color: 'var(--text-muted)',
+                      transform: showResultIdea ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      display: 'inline-block'
+                    }}>
+                      ▼
+                    </span>
+                  </div>
+                  
+                  <AnimatePresence initial={true}>
+                    {showResultIdea && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <p className="font-body-md text-body leading-relaxed pt-3" style={{ fontSize: '14px', borderTop: '1px solid var(--border-passive)', margin: 0 }}>
+                          {result.project_idea || idea}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Overall Score Card on Top! */}
+                <div className="md:col-span-1">
+                  <div className="lovable-card flex flex-col justify-between" style={{ backgroundColor: 'var(--colors-signature-peach)', minHeight: '115px', border: 'none', padding: '20px 24px' }}>
+                    <div>
+                      <span className="font-caption uppercase tracking-wider text-ink opacity-80" style={{ color: '#1c1c1c', fontSize: '11px' }}>Overall Score</span>
+                      <div className="font-display-md mt-1" style={{ color: '#1c1c1c', fontSize: '26px' }}>{result.overall_score} <span className="font-title-sm opacity-60">/ 100</span></div>
+                    </div>
+                    <p className="font-body-md leading-relaxed mt-2" style={{ color: '#1c1c1c', fontSize: '13px', lineHeight: '1.4', margin: 0 }}>
+                      {result.overall_score >= 80 ? "Exemplary proposal demonstrating high feasibility and alignment." : 
+                       result.overall_score >= 50 ? "Solid foundation with room for local scaling and engagement." :
+                       "Early stage project. Focus on sharpening essential questions."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* High Voltage Score Grid in Lovable Styling */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <ScoreCard title="Feasibility" score={result.scores.feasibility} type="feasibility" description="Measures operational practicality and student resource constraints." />
@@ -558,48 +650,28 @@ const App = () => {
                 <ScoreCard title="SDG Alignment" score={result.scores.sdg_alignment} type="sdg" description="Tracks alignment with the NITI Aayog SDG India Index indicators." />
               </div>
 
-              {/* Overall Score & SDG Badges */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {/* Overall score */}
-                <div className="md:col-span-1">
-                  <div className="lovable-card flex flex-col justify-between" style={{ backgroundColor: 'var(--colors-signature-peach)', minHeight: '220px', border: 'none', padding: '24px' }}>
-                    <div>
-                      <span className="font-caption uppercase tracking-wider text-ink opacity-80" style={{ color: '#1c1c1c', fontSize: '12px' }}>Overall Score</span>
-                      <div className="font-display-md mt-2" style={{ color: '#1c1c1c', fontSize: '28px' }}>{result.overall_score} <span className="font-title-sm opacity-60">/ 100</span></div>
-                    </div>
-                    <div className="mt-auto" style={{ marginTop: '20px' }}>
-                      <p className="font-body-md leading-relaxed" style={{ color: '#1c1c1c', fontSize: '14px', lineHeight: '1.45' }}>
-                        {result.overall_score >= 80 ? "Exemplary proposal demonstrating high feasibility and alignment with key SDG indicators." : 
-                         result.overall_score >= 50 ? "Solid foundation with room for expanding local community engagement and technical scaling." :
-                         "Early stage project. Focus on sharpening essential questions and identifying local SDG metrics."}
-                      </p>
-                    </div>
-                  </div>
+              {/* Core SDGs Addressed Card (Full Width!) */}
+              <div className="lovable-card flex flex-col justify-between w-full" style={{ minHeight: '180px', padding: '24px' }}>
+                <div>
+                  <span className="font-caption uppercase tracking-wider text-muted" style={{ fontSize: '12px' }}>Core SDGs Addressed</span>
+                  <h3 className="font-title-sm mt-1" style={{ fontWeight: 600, fontSize: '16px' }}>India SDG Map</h3>
                 </div>
-
-                {/* Target SDGs */}
-                <div className="md:col-span-2 lovable-card flex flex-col justify-between" style={{ minHeight: '220px', padding: '24px' }}>
-                  <div>
-                    <span className="font-caption uppercase tracking-wider text-muted" style={{ fontSize: '12px' }}>Core SDGs Addressed</span>
-                    <h3 className="font-title-sm mt-1" style={{ fontWeight: 600, fontSize: '16px' }}>India SDG Map</h3>
-                  </div>
-                  <div className="flex flex-wrap gap-2 my-4">
-                    {result.sdg_goals.map((sdg, i) => {
-                      const pastels = ['var(--colors-signature-mint)', 'var(--colors-signature-yellow)', 'var(--colors-signature-peach)', 'var(--colors-signature-mustard)'];
-                      const pastelColor = pastels[i % pastels.length];
-                      return (
-                        <span 
-                          key={i} 
-                          className="px-3 py-1.5 font-body-md text-ink rounded-lg font-medium"
-                          style={{ backgroundColor: pastelColor, fontSize: '13px', color: '#1c1c1c' }}
-                        >
-                          {sdg}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  <p className="font-body-md text-muted" style={{ fontSize: '13px' }}>Mapped dynamically based on NITI Aayog indicators.</p>
+                <div className="flex flex-wrap gap-2.5 my-4">
+                  {result.sdg_goals.map((sdg, i) => {
+                    const pastels = ['var(--colors-signature-mint)', 'var(--colors-signature-yellow)', 'var(--colors-signature-peach)', 'var(--colors-signature-mustard)'];
+                    const pastelColor = pastels[i % pastels.length];
+                    return (
+                      <span 
+                        key={i} 
+                        className="px-3 py-1.5 font-body-md text-ink rounded-lg font-medium"
+                        style={{ backgroundColor: pastelColor, fontSize: '13px', color: '#1c1c1c' }}
+                      >
+                        {sdg}
+                      </span>
+                    );
+                  })}
                 </div>
+                <p className="font-body-md text-muted" style={{ fontSize: '13px', margin: 0 }}>Mapped dynamically based on NITI Aayog indicators.</p>
               </div>
 
               {/* Detailed Evaluation & Roadmap */}
@@ -665,6 +737,142 @@ const App = () => {
           </span>
         </div>
       </footer>
+
+      {/* Evaluation History Drawer */}
+      <AnimatePresence>
+        {showHistoryDrawer && (
+          <>
+            {/* Overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowHistoryDrawer(false)}
+              className="settings-overlay"
+            />
+
+            {/* Drawer Container */}
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="settings-drawer"
+              style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--border-passive)' }}>
+                <h3 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                  <History size={20} className="text-muted" />
+                  Evaluation History
+                </h3>
+                <button 
+                  onClick={() => setShowHistoryDrawer(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                  className="text-muted hover:text-ink flex items-center justify-center"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* List */}
+              <div className="flex-grow flex flex-col gap-3" style={{ overflowY: 'auto', paddingRight: '4px' }}>
+                {history.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-12 px-4 gap-2">
+                    <span style={{ fontSize: '28px' }}>📜</span>
+                    <h4 className="font-body-md text-ink" style={{ fontWeight: 500, margin: 0 }}>No evaluations yet</h4>
+                    <p className="font-legal text-muted" style={{ fontSize: '12px', margin: 0 }}>Your analyzed projects will appear here.</p>
+                  </div>
+                ) : (
+                  history.map((item) => (
+                    <div 
+                      key={item.id}
+                      onClick={() => {
+                        setIdea(item.idea);
+                        setResult({
+                          ...item.result,
+                          project_idea: item.idea
+                        });
+                        setShowHistoryDrawer(false);
+                        setShowResultIdea(true);
+                        setTimeout(() => {
+                          document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }}
+                      className="lovable-card compact flex items-center justify-between cursor-pointer"
+                      style={{ 
+                        backgroundColor: 'var(--bg-surface-soft)', 
+                        border: '1px solid var(--border-passive)',
+                        textAlign: 'left',
+                        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                        padding: '12px'
+                      }}
+                    >
+                      <div className="flex flex-col gap-1 flex-grow" style={{ maxWidth: '75%' }}>
+                        <span className="font-caption text-muted" style={{ fontSize: '11px' }}>{item.timestamp}</span>
+                        <p className="font-body-md text-ink" style={{ 
+                          fontSize: '13.5px', 
+                          fontWeight: 500, 
+                          whiteSpace: 'nowrap', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis',
+                          margin: 0
+                        }}>
+                          {item.idea}
+                        </p>
+                      </div>
+                      
+                      {/* Overall Score Badge */}
+                      <div 
+                        className="font-title-sm flex items-center justify-center"
+                        style={{ 
+                          width: '38px', 
+                          height: '38px', 
+                          borderRadius: 'var(--rounded-md)', 
+                          backgroundColor: 'var(--colors-signature-peach)',
+                          color: '#1c1c1c',
+                          fontWeight: 600,
+                          fontSize: '13px',
+                          flexShrink: 0
+                        }}
+                      >
+                        {item.result.overall_score}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Clear button */}
+              {history.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to clear your evaluation history?")) {
+                      setHistory([]);
+                      localStorage.removeItem('cbl_evaluations_history');
+                    }
+                  }}
+                  className="button-secondary"
+                  style={{ 
+                    width: '100%', 
+                    height: '44px', 
+                    color: 'var(--colors-error)', 
+                    borderColor: 'rgba(170, 45, 0, 0.3)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Clear History
+                </button>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
