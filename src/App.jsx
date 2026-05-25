@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { evaluateIdea, validateApiKey, fetchModels, DEFAULT_PROMPT } from './services/GeminiService';
 
 const ScoreCard = ({ title, score, type, description }) => {
@@ -873,6 +874,7 @@ const App = () => {
           </>
         )}
       </AnimatePresence>
+      <SpeedInsights />
     </div>
   );
 };
