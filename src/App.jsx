@@ -1241,8 +1241,12 @@ const App = () => {
                             borderRadius: 'var(--rounded-md)', 
                             backgroundColor: 'var(--colors-signature-peach)',
                             color: '#1c1c1c',
-                            fontWeight: 600,
-                            fontSize: '13px'
+                            fontWeight: 'bold', // Bold font as explicitly requested by user
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            textAlign: 'center'
                           }}
                         >
                           {item.result.overall_score}
