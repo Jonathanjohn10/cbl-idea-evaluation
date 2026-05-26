@@ -459,14 +459,17 @@ const App = () => {
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 flex flex-col items-center justify-center z-50 px-6"
+            className="fixed inset-0 z-50 px-6"
             style={{
               backgroundColor: 'var(--bg-page)',
               minHeight: '100vh',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            <div className="max-w-xl w-full flex flex-col items-center py-12" style={{ gap: 0 }}>
+            <div className="splash-container">
               
               {/* App Icon / Pulsing Loading Indicator */}
               <div className="relative" style={{ width: '80px', height: '80px', marginBottom: '32px' }}>
@@ -557,7 +560,7 @@ const App = () => {
                   What You Get Using This Application
                 </span>
 
-                <div className="grid grid-cols-1 gap-4 w-full text-left" style={{ marginBottom: '40px' }}>
+                <div className="benefits-grid text-left" style={{ marginTop: '24px', marginBottom: '48px' }}>
                   {/* Benefit 1 */}
                   <div className="lovable-card compact flex gap-4 items-start" style={{ padding: '16px', backgroundColor: 'var(--bg-surface-soft)', border: '1px solid var(--border-passive)', borderLeft: '4px solid var(--colors-signature-peach)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
                     <span style={{ fontSize: '20px', lineHeight: '1.2', flexShrink: 0 }}>🎯</span>
