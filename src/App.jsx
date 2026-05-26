@@ -180,6 +180,7 @@ const CustomSelect = ({ value, onChange, options }) => {
 const App = () => {
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || 'AlzaSyCMNjKK_TvQrpAaMpHFJtwDsuuqrr-EhNA');
   const [showKey, setShowKey] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const [model, setModel] = useState('gemini-1.5-flash');
   const [prompt, setPrompt] = useState(localStorage.getItem('system_prompt') || DEFAULT_PROMPT);
   const [idea, setIdea] = useState('');
@@ -282,6 +283,14 @@ const App = () => {
       document.body.classList.remove('dark');
     }
   }, [theme]);
+
+  // Loading splash screen timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3800); // 3.8s allows full load and comfortable reading of app benefits
+    return () => clearTimeout(timer);
+  }, []);
 
   // Synchronize Supabase credentials and fetch history dynamically
   useEffect(() => {
@@ -442,7 +451,163 @@ const App = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <>
+      <AnimatePresence mode="wait">
+        {showSplash && (
+          <motion.div
+            key="splash-screen"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 flex flex-col items-center justify-center z-50 px-6"
+            style={{
+              backgroundColor: 'var(--bg-page)',
+              minHeight: '100vh',
+              overflowY: 'auto'
+            }}
+          >
+            <div className="max-w-xl w-full flex flex-col items-center text-center gap-8 py-12">
+              
+              {/* App Icon / Pulsing Loading Indicator */}
+              <div className="relative flex items-center justify-center" style={{ width: '80px', height: '80px' }}>
+                {/* Outermost pulsing ring */}
+                <motion.div
+                  animate={{ scale: [1, 1.4, 1], opacity: [0.15, 0.4, 0.15] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                  style={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    border: '2px solid var(--colors-signature-peach)',
+                  }}
+                />
+                
+                {/* Middle pulsing ring */}
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.25, 0.6, 0.25] }}
+                  transition={{ repeat: Infinity, duration: 2.0, ease: "easeInOut", delay: 0.3 }}
+                  style={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    border: '2px solid var(--colors-signature-mint)',
+                  }}
+                />
+
+                {/* Inner rotating core */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 3.5, ease: "linear" }}
+                  className="flex items-center justify-center"
+                  style={{
+                    width: '50%',
+                    height: '50%',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--bg-surface-strong)',
+                    border: '1px solid var(--border-passive)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <Cpu size={22} className="text-ink" />
+                </motion.div>
+              </div>
+
+              {/* Title & Subtitle */}
+              <div className="flex flex-col gap-3">
+                <motion.h1 
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.5 }}
+                  className="font-display-md" 
+                  style={{ fontSize: '36px', letterSpacing: '-0.8px', fontWeight: 600, margin: 0 }}
+                >
+                  CBL Idea Evaluator
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.8 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                  className="font-body-large text-muted" 
+                  style={{ fontSize: '15px', maxWidth: '380px', margin: '0 auto', lineHeight: '1.45' }}
+                >
+                  AI-powered SDG Alignment & Project Analysis for Challenge-Based Learning
+                </motion.p>
+              </div>
+
+              {/* Benefits Section */}
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+                className="w-full flex flex-col gap-3.5 mt-2"
+              >
+                <span className="font-caption uppercase tracking-wider text-muted text-center block mb-1" style={{ fontSize: '11px' }}>
+                  What You Get Using This Application
+                </span>
+
+                <div className="grid grid-cols-1 gap-3 text-left">
+                  {/* Benefit 1 */}
+                  <div className="lovable-card compact flex gap-4 items-start" style={{ padding: '16px', backgroundColor: 'var(--bg-surface-soft)', border: '1px solid var(--border-passive)', borderLeft: '4px solid var(--colors-signature-peach)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+                    <span style={{ fontSize: '20px', lineHeight: '1.2', flexShrink: 0 }}>🎯</span>
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>Instant SDG & NITI India Alignment</h4>
+                      <p className="font-body-md text-muted" style={{ fontSize: '12.5px', margin: 0, lineHeight: '1.4' }}>
+                        Directly map any challenge to the UN Sustainable Development Goals and national index benchmarks in seconds.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Benefit 2 */}
+                  <div className="lovable-card compact flex gap-4 items-start" style={{ padding: '16px', backgroundColor: 'var(--bg-surface-soft)', border: '1px solid var(--border-passive)', borderLeft: '4px solid var(--colors-signature-mint)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+                    <span style={{ fontSize: '20px', lineHeight: '1.2', flexShrink: 0 }}>🗺️</span>
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>CBL Roadmap to Excellence</h4>
+                      <p className="font-body-md text-muted" style={{ fontSize: '12.5px', margin: 0, lineHeight: '1.4' }}>
+                        Obtain structured guides containing concrete Big Ideas, Essential Questions, and actionable student challenges.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Benefit 3 */}
+                  <div className="lovable-card compact flex gap-4 items-start" style={{ padding: '16px', backgroundColor: 'var(--bg-surface-soft)', border: '1px solid var(--border-passive)', borderLeft: '4px solid var(--colors-signature-yellow)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+                    <span style={{ fontSize: '20px', lineHeight: '1.2', flexShrink: 0 }}>☁️</span>
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>Secure Real-Time Database Sync</h4>
+                      <p className="font-body-md text-muted" style={{ fontSize: '12.5px', margin: 0, lineHeight: '1.4' }}>
+                        Sync your analysis history securely to your private Supabase DB, featuring full offline-fallback backups.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Progress Loading Bar */}
+              <div className="w-full max-w-xs flex flex-col items-center gap-2 mt-6">
+                <div className="card-progress-track dark w-full" style={{ height: '4px', backgroundColor: 'var(--border-passive)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 3.5, ease: "easeInOut" }}
+                    className="card-progress-bar dark"
+                  />
+                </div>
+                <span className="font-legal text-muted" style={{ fontSize: '11.5px', marginTop: '4px' }}>Initializing CBL workspace...</span>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!showSplash && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col min-h-screen"
+        >
       
       {/* Top Utility bar holding the Pill Mode Toggle & History */}
       <div className="max-w-3xl mx-auto w-full px-6 pt-6 flex justify-end gap-3">
@@ -1116,7 +1281,9 @@ const App = () => {
           </>
         )}
       </AnimatePresence>
-    </div>
+        </motion.div>
+      )}
+    </>
   );
 };
 
