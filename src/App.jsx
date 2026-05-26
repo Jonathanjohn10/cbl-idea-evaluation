@@ -469,7 +469,7 @@ const App = () => {
             <div className="max-w-xl w-full flex flex-col items-center text-center gap-8 py-12">
               
               {/* App Icon / Pulsing Loading Indicator */}
-              <div className="relative flex items-center justify-center" style={{ width: '80px', height: '80px' }}>
+              <div className="relative" style={{ width: '80px', height: '80px' }}>
                 {/* Outermost pulsing ring */}
                 <motion.div
                   animate={{ scale: [1, 1.4, 1], opacity: [0.15, 0.4, 0.15] }}
@@ -478,6 +478,8 @@ const App = () => {
                     position: 'absolute',
                     width: '100%',
                     height: '100%',
+                    top: 0,
+                    left: 0,
                     borderRadius: '50%',
                     border: '2px solid var(--colors-signature-peach)',
                   }}
@@ -491,6 +493,8 @@ const App = () => {
                     position: 'absolute',
                     width: '100%',
                     height: '100%',
+                    top: 0,
+                    left: 0,
                     borderRadius: '50%',
                     border: '2px solid var(--colors-signature-mint)',
                   }}
@@ -500,14 +504,19 @@ const App = () => {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 3.5, ease: "linear" }}
-                  className="flex items-center justify-center"
                   style={{
-                    width: '50%',
-                    height: '50%',
+                    position: 'absolute',
+                    width: '40px',
+                    height: '40px',
+                    top: '20px',
+                    left: '20px',
                     borderRadius: '50%',
                     backgroundColor: 'var(--bg-surface-strong)',
                     border: '1px solid var(--border-passive)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   <Cpu size={22} className="text-ink" />
