@@ -288,7 +288,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3800); // 3.8s allows full load and comfortable reading of app benefits
+    }, 6500); // 6.5s allows full load and comfortable reading of app benefits
     return () => clearTimeout(timer);
   }, []);
 
@@ -466,10 +466,10 @@ const App = () => {
               overflowY: 'auto'
             }}
           >
-            <div className="max-w-xl w-full flex flex-col items-center text-center gap-8 py-12">
+            <div className="max-w-xl w-full flex flex-col items-center py-12" style={{ gap: 0 }}>
               
               {/* App Icon / Pulsing Loading Indicator */}
-              <div className="relative" style={{ width: '80px', height: '80px' }}>
+              <div className="relative" style={{ width: '80px', height: '80px', marginBottom: '32px' }}>
                 {/* Outermost pulsing ring */}
                 <motion.div
                   animate={{ scale: [1, 1.4, 1], opacity: [0.15, 0.4, 0.15] }}
@@ -524,13 +524,13 @@ const App = () => {
               </div>
 
               {/* Title & Subtitle */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col text-center" style={{ gap: 0, marginBottom: '36px' }}>
                 <motion.h1 
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.5 }}
                   className="font-display-md" 
-                  style={{ fontSize: '36px', letterSpacing: '-0.8px', fontWeight: 600, margin: 0 }}
+                  style={{ fontSize: '36px', letterSpacing: '-0.8px', fontWeight: 600, margin: '0 0 10px 0' }}
                 >
                   CBL Idea Evaluator
                 </motion.h1>
@@ -539,7 +539,7 @@ const App = () => {
                   animate={{ opacity: 0.8 }}
                   transition={{ delay: 0.5, duration: 0.5 }}
                   className="font-body-large text-muted" 
-                  style={{ fontSize: '15px', maxWidth: '380px', margin: '0 auto', lineHeight: '1.45' }}
+                  style={{ fontSize: '15px', maxWidth: '420px', margin: '0 auto', lineHeight: '1.5' }}
                 >
                   AI-powered SDG Alignment & Project Analysis for Challenge-Based Learning
                 </motion.p>
@@ -550,20 +550,21 @@ const App = () => {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
-                className="w-full flex flex-col gap-3.5 mt-2"
+                className="w-full flex flex-col"
+                style={{ gap: 0 }}
               >
-                <span className="font-caption uppercase tracking-wider text-muted text-center block mb-1" style={{ fontSize: '11px' }}>
+                <span className="font-caption uppercase tracking-wider text-muted text-center block" style={{ fontSize: '11px', letterSpacing: '0.12em', marginBottom: '16px' }}>
                   What You Get Using This Application
                 </span>
 
-                <div className="grid grid-cols-1 gap-3 text-left">
+                <div className="grid grid-cols-1 gap-4 w-full text-left" style={{ marginBottom: '40px' }}>
                   {/* Benefit 1 */}
                   <div className="lovable-card compact flex gap-4 items-start" style={{ padding: '16px', backgroundColor: 'var(--bg-surface-soft)', border: '1px solid var(--border-passive)', borderLeft: '4px solid var(--colors-signature-peach)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
                     <span style={{ fontSize: '20px', lineHeight: '1.2', flexShrink: 0 }}>🎯</span>
-                    <div className="flex flex-col gap-1">
-                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>Instant SDG & NITI India Alignment</h4>
-                      <p className="font-body-md text-muted" style={{ fontSize: '12.5px', margin: 0, lineHeight: '1.4' }}>
-                        Directly map any challenge to the UN Sustainable Development Goals and national index benchmarks in seconds.
+                    <div className="flex flex-col gap-1 text-left">
+                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14.5px', margin: 0, textAlign: 'left', color: 'var(--text-primary)' }}>Instant SDG & NITI India Alignment</h4>
+                      <p className="font-body-md text-muted" style={{ fontSize: '13px', margin: 0, lineHeight: '1.45', textAlign: 'left', color: 'var(--text-body)' }}>
+                        Map challenges to UN Sustainable Development Goals and national index benchmarks in seconds.
                       </p>
                     </div>
                   </div>
@@ -571,10 +572,10 @@ const App = () => {
                   {/* Benefit 2 */}
                   <div className="lovable-card compact flex gap-4 items-start" style={{ padding: '16px', backgroundColor: 'var(--bg-surface-soft)', border: '1px solid var(--border-passive)', borderLeft: '4px solid var(--colors-signature-mint)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
                     <span style={{ fontSize: '20px', lineHeight: '1.2', flexShrink: 0 }}>🗺️</span>
-                    <div className="flex flex-col gap-1">
-                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>CBL Roadmap to Excellence</h4>
-                      <p className="font-body-md text-muted" style={{ fontSize: '12.5px', margin: 0, lineHeight: '1.4' }}>
-                        Obtain structured guides containing concrete Big Ideas, Essential Questions, and actionable student challenges.
+                    <div className="flex flex-col gap-1 text-left">
+                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14.5px', margin: 0, textAlign: 'left', color: 'var(--text-primary)' }}>CBL Roadmap to Excellence</h4>
+                      <p className="font-body-md text-muted" style={{ fontSize: '13px', margin: 0, lineHeight: '1.45', textAlign: 'left', color: 'var(--text-body)' }}>
+                        Obtain structured guides containing concrete Big Ideas, Essential Questions, and challenges.
                       </p>
                     </div>
                   </div>
@@ -582,10 +583,10 @@ const App = () => {
                   {/* Benefit 3 */}
                   <div className="lovable-card compact flex gap-4 items-start" style={{ padding: '16px', backgroundColor: 'var(--bg-surface-soft)', border: '1px solid var(--border-passive)', borderLeft: '4px solid var(--colors-signature-yellow)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
                     <span style={{ fontSize: '20px', lineHeight: '1.2', flexShrink: 0 }}>☁️</span>
-                    <div className="flex flex-col gap-1">
-                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>Secure Real-Time Database Sync</h4>
-                      <p className="font-body-md text-muted" style={{ fontSize: '12.5px', margin: 0, lineHeight: '1.4' }}>
-                        Sync your analysis history securely to your private Supabase DB, featuring full offline-fallback backups.
+                    <div className="flex flex-col gap-1 text-left">
+                      <h4 className="font-title-sm text-ink" style={{ fontWeight: 600, fontSize: '14.5px', margin: 0, textAlign: 'left', color: 'var(--text-primary)' }}>Secure Real-Time Database Sync</h4>
+                      <p className="font-body-md text-muted" style={{ fontSize: '13px', margin: 0, lineHeight: '1.45', textAlign: 'left', color: 'var(--text-body)' }}>
+                        Sync your analysis history securely to your private Supabase DB with local cache backup.
                       </p>
                     </div>
                   </div>
@@ -593,16 +594,16 @@ const App = () => {
               </motion.div>
 
               {/* Progress Loading Bar */}
-              <div className="w-full max-w-xs flex flex-col items-center gap-2 mt-6">
+              <div className="w-full max-w-xs flex flex-col items-center gap-2" style={{ marginTop: '8px' }}>
                 <div className="card-progress-track dark w-full" style={{ height: '4px', backgroundColor: 'var(--border-passive)', borderRadius: '2px', overflow: 'hidden' }}>
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: "100%" }}
-                    transition={{ duration: 3.5, ease: "easeInOut" }}
+                    transition={{ duration: 6.2, ease: "easeInOut" }}
                     className="card-progress-bar dark"
                   />
                 </div>
-                <span className="font-legal text-muted" style={{ fontSize: '11.5px', marginTop: '4px' }}>Initializing CBL workspace...</span>
+                <span className="font-legal text-muted" style={{ fontSize: '11.5px', marginTop: '6px' }}>Initializing CBL workspace...</span>
               </div>
 
             </div>
